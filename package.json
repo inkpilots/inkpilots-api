@@ -20,7 +20,10 @@
 	],
 	"scripts": {
 		"build": "tsup src/index.ts --format esm,cjs --dts --clean",
-		"prepublishOnly": "npm run build"
+		"prepublishOnly": "npm run build",
+		"publish:patch": "npm run build && npm version patch && npm publish --access public",
+		"publish:minor": "npm version minor && npm publish --access public",
+		"publish:major": "npm version major && npm publish --access public"
 	},
 	"devDependencies": {
 		"@types/node": "^25.0.6",
