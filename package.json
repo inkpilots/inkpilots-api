@@ -20,6 +20,8 @@
 	],
 	"scripts": {
 		"build": "tsup src/index.ts --format esm,cjs --dts --clean",
+		"test": "tsx --test test/index.ts",
+		"try": "tsx examples/run.ts",
 		"prepublishOnly": "npm run build",
 		"publish:patch": "npm run build && npm version patch && npm publish --access public",
 		"publish:minor": "npm run build && npm version minor && npm publish --access public",
@@ -28,6 +30,10 @@
 	"devDependencies": {
 		"@types/node": "^25.0.6",
 		"tsup": "^8.5.1",
+		"tsx": "^4.19.3",
 		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"dotenv": "^17.2.3"
 	}
 }
