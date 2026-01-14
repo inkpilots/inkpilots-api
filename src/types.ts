@@ -118,4 +118,60 @@ export interface Pagination {
 export interface AgentArticlesResponse {
 	articles: Article[];
 	pagination: Pagination;
+	agent?: undefined;
 }
+
+export type Agent = {
+	id: string;
+	workspaceId?: string;
+	name: string;
+	description?: string;
+	model: string;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type WorkspaceGetResponse = {
+	workspace: {
+		id: string;
+		name: string;
+		slug: string;
+		ownerId: string; // Foreign key to User
+		visibility: boolean; // If true, workspace site is publicly visible
+		header?: {
+			websiteTitle?: string;
+			description?: string;
+			address?: string;
+			phone?: string;
+			email?: string;
+			website?: string;
+			blog?: string;
+			documentation?: string;
+			support?: string;
+			socialAccounts?: {
+				twitter?: string;
+				facebook?: string;
+				instagram?: string;
+				linkedin?: string;
+				github?: string;
+				youtube?: string;
+			};
+			createdAt?: Date;
+			updatedAt?: Date;
+		};
+
+		// Note: planId, quotas, and Stripe info are now at the User (account) level
+		// See SubscriptionDocument for subscription details
+
+		createdAt: Date;
+		updatedAt: Date;
+	};
+	agents: Array<
+		{
+			id: string;
+			workspaceId?: string;
+			articles: Array<Article>;
+		} & Record<string, unknown>
+	>;
+};
+

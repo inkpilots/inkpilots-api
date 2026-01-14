@@ -4,7 +4,7 @@ import {
 	InkPilotsQuotaExceededError,
 	type InkPilotsErrorCode,
 } from "./errors";
-import type { AgentArticlesResponse } from "./types";
+import type { AgentArticlesResponse, WorkspaceGetResponse } from "./types";
 
 export type InkPilotsClientOptions = {
 	apiKey?: string; // defaults to process.env.INKPILOTS_API_KEY
@@ -39,10 +39,7 @@ export class InkPilotsClient {
 		}
 
 		this.apiKey = key;
-		this.baseUrl = ("https://www.inkpilots.com/api/v1").replace(
-			/\/+$/,
-			""
-		);
+		this.baseUrl = "https://www.inkpilots.com/api/v1".replace(/\/+$/, "");
 		this.timeoutMs = opts.timeoutMs ?? 30_000;
 	}
 
@@ -59,6 +56,14 @@ export class InkPilotsClient {
 			method: "GET",
 			path: `/agents/${encodeURIComponent(agentId)}/articles`,
 			query: { limit, skip, status },
+		});
+	}
+
+	// api/v1/workspaces/:workspaceId GET
+	async getWorkspace(workspaceId: string) {
+		return this.request<WorkspaceGetResponse>({
+			method: "GET",
+			path: `/workspaces/${encodeURIComponent(workspaceId)}`,
 		});
 	}
 
