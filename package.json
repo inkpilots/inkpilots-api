@@ -1,6 +1,6 @@
 {
 	"name": "@inkpilots/sdk",
-	"version": "0.1.3",
+	"version": "0.2.0",
 	"description": "Official InkPilots API SDK",
 	"license": "MIT",
 	"sideEffects": false,
