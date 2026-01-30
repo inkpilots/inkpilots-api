@@ -1,10 +1,19 @@
 export { InkPilotsClient } from "./client";
 export { InkPilotsApiError, InkPilotsQuotaExceededError } from "./errors";
 
-export type { InkPilotsClientOptions, GetAgentArticlesOptions } from "./client";
+export type {
+	InkPilotsClientOptions,
+	FetchAgentArticlesOptions,
+	FetchAgentsOptions,
+	FetchArticlesOptions,
+} from "./client";
 export type {
 	AgentArticlesResponse,
-	Pagination,
+	AgentsListResponse,
+	AgentGetResponse,
+	ArticlesListResponse,
+	ArticleGetResponse,
+	ListPagination,
 	Article,
 	ArticleBlock,
 	ArticleBlockType,
@@ -17,4 +26,5 @@ export type {
 	QuoteBlock,
 	DividerBlock,
 	CodeBlock,
+	WorkspaceGetResponse,
 } from "./types";

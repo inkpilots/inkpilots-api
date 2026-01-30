@@ -4,7 +4,14 @@ import {
 	InkPilotsQuotaExceededError,
 	type InkPilotsErrorCode,
 } from "./errors";
-import type { AgentArticlesResponse, WorkspaceGetResponse } from "./types";
+import type {
+	AgentArticlesResponse,
+	AgentsListResponse,
+	AgentGetResponse,
+	ArticlesListResponse,
+	ArticleGetResponse,
+	WorkspaceGetResponse,
+} from "./types";
 
 export type InkPilotsClientOptions = {
 	apiKey?: string; // defaults to process.env.INKPILOTS_API_KEY
@@ -12,13 +19,42 @@ export type InkPilotsClientOptions = {
 	timeoutMs?: number; // default 30s
 };
 
-export type GetAgentArticlesOptions = {
+export type FetchAgentsOptions = {
+	limit?: number; // default 10
+	skip?: number; // default 0
+	sortBy?: string; // default createdAt
+	sortOrder?: "asc" | "desc"; // default desc
+	status?: "active" | "inactive";
+	executionMode?: "scheduled" | "batched";
+	model?: string;
+	search?: string;
+};
+
+export type FetchArticlesOptions = {
+	limit?: number; // default 10
+	skip?: number; // default 0
+	sortBy?: string; // default createdAt
+	sortOrder?: "asc" | "desc"; // default desc
+	agentId?: string;
+	status?: "draft" | "published" | "archived";
+	language?: string;
+	model?: string;
+	tags?: string | string[]; // comma-separated when sent
+	search?: string;
+  slug?: string; // article slug to filter by
+};
+
+export type FetchAgentArticlesOptions = {
 	limit?: number; // default 50
 	skip?: number; // default 0
 	status?: "draft" | "published" | "archived"; // default "published"
-  slug?: string; // optional article slug to filter by
-  sortBy?: "createdAt" | "updatedAt"; // optional sort by field
-  sortOrder?: "asc" | "desc"; // optional sort order
+	slug?: string; // optional article slug to filter by
+	sort?: "createdAt" | "updatedAt" | string; // API expects `sort`
+	order?: "asc" | "desc"; // API expects `order`
+	/** @deprecated Use `sort` instead */
+	sortBy?: "createdAt" | "updatedAt" | string;
+	/** @deprecated Use `order` instead */
+	sortOrder?: "asc" | "desc";
 };
 
 type RequestOptions = {
@@ -42,28 +78,113 @@ export class InkPilotsClient {
 		}
 
 		this.apiKey = key;
-		this.baseUrl = "https://www.inkpilots.com/api/v1".replace(/\/+$/, "");
+		this.baseUrl = (opts.baseUrl ?? "https://www.inkpilots.com/api/v1").replace(
+			/\/+$/,
+			""
+		);
 		this.timeoutMs = opts.timeoutMs ?? 30_000;
+	}
+
+	/**
+	 * GET /agents?skip=&limit=&status=
+	 */
+	async fetchAgents(
+		options: FetchAgentsOptions = {}
+	): Promise<AgentsListResponse> {
+		const limit = clampLimit(options.limit, 10);
+		const skip = normalizeSkip(options.skip);
+		const sortBy = options.sortBy ?? "createdAt";
+		const sortOrder = options.sortOrder ?? "desc";
+
+		return this.request<AgentsListResponse>({
+			method: "GET",
+			path: "/agents",
+			query: {
+				limit,
+				skip,
+				sortBy,
+				sortOrder,
+				status: options.status,
+				executionMode: options.executionMode,
+				model: options.model,
+				search: options.search,
+			},
+		});
+	}
+
+	/**
+	 * GET /agents/:agentId
+	 */
+	async fetchAgent(agentId: string): Promise<AgentGetResponse> {
+		return this.request<AgentGetResponse>({
+			method: "GET",
+			path: `/agents/${encodeURIComponent(agentId)}`,
+		});
+	}
+
+	/**
+	 * GET /articles?skip=&limit=&status=
+	 */
+	async fetchArticles(
+		options: FetchArticlesOptions = {}
+	): Promise<ArticlesListResponse> {
+		const limit = clampLimit(options.limit, 10);
+		const skip = normalizeSkip(options.skip);
+		const sortBy = options.sortBy ?? "createdAt";
+		const sortOrder = options.sortOrder ?? "desc";
+		const tags = formatTags(options.tags);
+
+		return this.request<ArticlesListResponse>({
+			method: "GET",
+			path: "/articles",
+			query: {
+				limit,
+				skip,
+				sortBy,
+				sortOrder,
+				agentId: options.agentId,
+				status: options.status,
+				language: options.language,
+				model: options.model,
+				tags,
+				search: options.search,
+        slug: options.slug, // support slug search via `search` param
+			},
+		});
+	}
+
+	/**
+	 * GET /articles/:articleId
+	 */
+	async fetchArticle(articleId: string): Promise<ArticleGetResponse> {
+		return this.request<ArticleGetResponse>({
+			method: "GET",
+			path: `/articles/${encodeURIComponent(articleId)}`,
+		});
 	}
 
 	/**
 	 * GET /agents/:agentId/articles?limit=&skip=&status=
 	 */
-	async getAgentArticles(
+	async fetchAgentArticles(
 		agentId: string,
-		options: GetAgentArticlesOptions = {}
+		options: FetchAgentArticlesOptions = {}
 	): Promise<AgentArticlesResponse> {
-		const { limit = 50, skip = 0, status = "published" } = options;
+		const limit = clampLimit(options.limit, 50);
+		const skip = normalizeSkip(options.skip);
+		const status = options.status ?? "published";
+		const sort = options.sort ?? options.sortBy ?? "createdAt";
+		const order = options.order ?? options.sortOrder ?? "desc";
 
 		return this.request<AgentArticlesResponse>({
 			method: "GET",
 			path: `/agents/${encodeURIComponent(agentId)}/articles`,
-			query: { limit, skip, status, slug: options.slug, sortBy: options.sortBy, sortOrder: options.sortOrder },
+			query: { limit, skip, status, slug: options.slug, sort, order },
 		});
 	}
 
 	// api/v1/workspaces/:workspaceId GET
-	async getWorkspace(workspaceId: string) {
+	async fetchWorkspace(workspaceId: string) {
 		return this.request<WorkspaceGetResponse>({
 			method: "GET",
 			path: `/workspaces/${encodeURIComponent(workspaceId)}`,
@@ -78,6 +199,7 @@ export class InkPilotsClient {
 				url.searchParams.set(k, String(v));
 			}
 		}
+    console.log("Built URL:", url.toString());
 		return url.toString();
 	}
 
@@ -88,11 +210,11 @@ export class InkPilotsClient {
 		try {
 			const res = await fetch(this.buildUrl(opts.path, opts.query), {
 				method: opts.method,
-				// NOTE: your backend expects x-api-key (not Authorization)
+				// API expects X-API-KEY with Bearer prefix
 				headers: {
 					"Content-Type": "application/json",
 					Accept: "application/json",
-					"x-api-key": `Bearer ${this.apiKey}`,
+					"X-API-KEY": `Bearer ${this.apiKey}`,
 				},
 				body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
 				signal: controller.signal,
@@ -140,6 +262,23 @@ export class InkPilotsClient {
 			clearTimeout(timer);
 		}
 	}
+}
+
+function normalizeSkip(value?: number): number {
+	const numeric = Number(value ?? 0);
+	if (!Number.isFinite(numeric) || numeric < 0) return 0;
+	return numeric;
+}
+
+function clampLimit(value: number | undefined, fallback: number): number {
+	const numeric = Number(value ?? fallback);
+	if (!Number.isFinite(numeric)) return fallback;
+	return Math.max(1, Math.min(100, numeric));
+}
+
+function formatTags(tags?: string | string[]): string | undefined {
+	if (!tags) return undefined;
+	return Array.isArray(tags) ? tags.join(",") : tags;
 }
 
 function safeJson(text: string): unknown {

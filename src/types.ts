@@ -76,21 +76,25 @@ export type ArticleBlock =
 	| CodeBlock;
 
 export interface Article {
-	_id: string;
+	_id?: string;
+	id: string;
 	workspaceId: string;
 	agentId?: string;
 	author?: string;
 
 	title: string;
 	slug?: string;
-	language: string; // e.g., "en", "tr"
+	description?: string;
+	language?: string; // e.g., "en", "tr"
+	tone?: string; // e.g., "professional", "casual"
 	coverImage?: string;
 
-	content: ArticleBlock[];
+	content?: ArticleBlock[];
+	blocks?: ArticleBlock[]; // Content blocks (structured content)
 
-	meta: {
+	meta?: {
 		description?: string;
-		keywords?: string[];
+		keywords?: string | string[];
 		tags?: string[];
 	};
 
@@ -98,38 +102,73 @@ export interface Article {
 
 	status: "draft" | "published" | "archived";
 
-	model: string;
-	promptTokens: number;
-	completionTokens: number;
-	totalTokens: number;
+	model?: string;
+	promptTokens?: number;
+	completionTokens?: number;
+	totalTokens?: number;
 
 	createdAt: string;
 	updatedAt: string;
 	publishedAt?: string | null;
-}
-
-export interface Pagination {
-	total: number;
-	limit: number;
-	skip: number;
-	hasMore: boolean;
-}
-
-export interface AgentArticlesResponse {
-	articles: Article[];
-	pagination: Pagination;
-	agent?: undefined;
+	createdBy?: string; // User ID who created
+	updatedBy?: string; // User ID who updated
 }
 
 export type Agent = {
 	id: string;
-	workspaceId?: string;
+	workspaceId: string;
 	name: string;
 	description?: string;
 	model: string;
+	status?: "active" | "inactive";
+	executionMode?: "scheduled" | "batched";
+	schedule?: string; // Cron expression e.g., "0 0 * * MON"
+	tone?: string; // e.g., "professional", "casual"
+	language?: string; // e.g., "en", "tr"
+	systemPrompt?: string;
+	userPrompt?: string;
+	isActive?: boolean;
+	prompt?: string; // Legacy prompt field
 	createdAt: string;
 	updatedAt: string;
+	createdBy?: string;
+	updatedBy?: string;
+	[key: string]: unknown;
 };
+
+export interface ListPagination {
+	skip: number;
+	limit: number;
+	totalCount: number;
+	totalPages: number;
+	currentPage: number;
+	hasNextPage: boolean;
+	hasPrevPage: boolean;
+}
+
+export interface AgentArticlesResponse {
+	articles: Article[];
+	pagination: ListPagination;
+	agent?: undefined;
+}
+
+export interface AgentsListResponse {
+	data: Agent[];
+	pagination: ListPagination;
+}
+
+export interface AgentGetResponse {
+	agent: Agent;
+}
+
+export interface ArticlesListResponse {
+	data: Article[];
+	pagination: ListPagination;
+}
+
+export interface ArticleGetResponse {
+	article: Article;
+}
 
 export type WorkspaceGetResponse = {
 	workspace: {
@@ -167,11 +206,9 @@ export type WorkspaceGetResponse = {
 		updatedAt: Date;
 	};
 	agents: Array<
-		{
-			id: string;
-			workspaceId?: string;
-			articles: Array<Article>;
-		} & Record<string, unknown>
+		Agent & {
+			articles?: Article[];
+		}
 	>;
 };
 
